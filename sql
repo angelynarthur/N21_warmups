@@ -12,3 +12,19 @@
 
 -- BIG HINT: Look at the expected results, how do you convert the dates to the 
 -- correct format (year and month)?
+
+
+WITH product_info AS (SELECT products.product_id, extract(year from orders.order_date) as year, extract(month from orders.order_date) as month,
+					  sum(order_details.quantity) AS units_sold
+FROM orders INNER JOIN order_details ON orders.order_id = order_details.order_id 
+INNER JOIN products ON products.product_id = order_details.product_id
+group by products.product_id, orders.order_date
+order by products.product_id),
+
+lag_info AS (SELECT *, lag(units_sold, 1) over (partition by product_id)
+previous_month, units_sold - lag(units_sold, 1) over (partition by product_id) difference from product_info),
+
+results AS (SELECT product_id, year, month, units_sold, previous_month, coalesce(difference,0) AS difference FROM lag_info)
+
+
+SELECT * from results;
